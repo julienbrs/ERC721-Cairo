@@ -2,5 +2,5 @@
 version = 1
 
 [[package]]
-name = "nft"
+name = "erc721"
 version = "0.1.0"
