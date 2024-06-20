@@ -5,6 +5,9 @@ trait IExternal<ContractState> {
     fn approve(ref self: ContractState, to: ContractAddress, token_id: u256);
     fn set_approval_for_all(ref self: ContractState, operator: ContractAddress, approved: bool);
     fn transfer_from(ref self: ContractState, from: ContractAddress, to: ContractAddress, token_id: u256);
+    fn mint(ref self: ContractState, to: ContractAddress, token_id: u256);
+    fn burn(ref self: ContractState, token_id: u256);
+    fn set_token_uri(ref self: ContractState, token_id: u256, token_uri: felt252);
 
     fn get_name(self: @ContractState) -> felt252;
     fn get_symbol(self: @ContractState) -> felt252;
@@ -21,6 +24,8 @@ mod ERC721Contract {
     use core::zeroable::Zeroable;
     use starknet::ContractAddress;
     use starknet::get_caller_address;
+
+    // Mintable, Burnable
 
     #[storage]
     struct Storage {
@@ -101,7 +106,7 @@ mod ERC721Contract {
 
         fn owner_of(self: @ContractState, token_id: u256) -> ContractAddress {
             let owner = self.owners.read(token_id);
-            assert(owner.is_non_zero(), 'ERC721: invalid token ID');
+            assert(token_id.is_non_zero(), 'ERC721: invalid token ID');
             owner
         }
 
@@ -146,17 +151,25 @@ mod ERC721Contract {
             );
             self._transfer(from, to, token_id);
         }
+
+        fn mint(ref self: ContractState, to: ContractAddress, token_id: u256) {
+            self._mint(to, token_id);
+        }
+
+        fn burn(ref self: ContractState, token_id: u256) {
+            self._burn(token_id);
+        }
+
+        fn set_token_uri(ref self: ContractState, token_id: u256, token_uri: felt252) {
+            assert(self._exists(token_id), 'ERC721: invalid token ID');
+            self.token_uri.write(token_id, token_uri)
+        }
     }
 
     #[generate_trait]
     impl ERC721HelperImpl of ERC721HelperTrait {
         fn _exists(self: @ContractState, token_id: u256) -> bool {
             self.owner_of(token_id).is_non_zero()
-        }
-
-        fn _set_token_uri(ref self: ContractState, token_id: u256, token_uri: felt252) {
-            assert(self._exists(token_id), 'ERC721: invalid token ID');
-            self.token_uri.write(token_id, token_uri)
         }
 
         fn _transfer(
